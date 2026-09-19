@@ -2,6 +2,10 @@
     "name": "dom-hunt",
     "displayName": "DOM Hunt",
     "version": "0.0.1",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/umerata/DomHunt.git"
+    },
     "engines": {
         "vscode": "^1.74.0"
     },
@@ -50,10 +54,12 @@
         "compile": "tsc -p ./"
     },
     "dependencies": {
-        "cheerio": "^1.0.0-rc.12",
-        "vscode": "^1.1.37"
+        "cheerio": "^1.0.0"
     },
     "devDependencies": {
+        "vscode": "^1.1.37",
+        "typescript": "^5.0.0",
+        "@vscode/vsce": "^3.0.0",
         "@types/cheerio": "^0.22.30",
         "@types/node": "^18.0.0"
     }
