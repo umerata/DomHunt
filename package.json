@@ -1,0 +1,52 @@
+{
+    "name": "dom-hunt",
+    "displayName": "DOM Hunt",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "activationEvents": [
+        "onCommand:dom-hunt.search"
+    ],
+    "contributes": {
+        "configuration": {
+            "title": "DOM Hunt",
+            "properties": {
+                "domSearcher.includeFolders": {
+                    "type": "array",
+                    "default": [
+                        "**/*.html"
+                    ],
+                    "description": "Glob patterns of files/folders to include in the search."
+                },
+                "domSearcher.excludeFolders": {
+                    "type": "array",
+                    "default": [
+                        "**/node_modules/**",
+                        "**/dist/**"
+                    ],
+                    "description": "Glob patterns of folders to ignore."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "dom-hunt.searchSingle",
+                "title": "DOM Hunt: Single Selector"
+            },
+            {
+                "command": "dom-hunt.searchDual",
+                "title": "DOM Hunt: Dual Selector (AND)"
+            },
+            {
+                "command": "dom-hunt.searchWithText",
+                "title": "DOM Hunt: Selector with Text"
+            }
+        ]
+    },
+    "main": "./out/extension.js",
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./"
+    }
+}
