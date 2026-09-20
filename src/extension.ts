@@ -3,8 +3,8 @@ import * as cheerio from 'cheerio';
 
 export function activate(context: vscode.ExtensionContext) {
     const outputChannel = vscode.window.createOutputChannel("DOM Hunt Results");
+    let currentSearchToken: vscode.CancellationTokenSource | undefined;
 
-    // Helper to handle persistent search history
     const getHistory = (key: string): string[] => context.workspaceState.get<string[]>(key, []);
     const saveToHistory = (key: string, value: string) => {
         let history = getHistory(key);
@@ -12,96 +12,89 @@ export function activate(context: vscode.ExtensionContext) {
         context.workspaceState.update(key, history);
     };
 
-    // Helper to get user settings from VS Code config
     const getSearchConfiguration = () => {
         const config = vscode.workspace.getConfiguration('domHunt');
-        const include = config.get<string[]>('includeFolders') || ['**/*.html'];
-        const exclude = config.get<string[]>('excludeFolders') || ['**/node_modules/**', '**/dist/**'];
-        return { include, exclude };
+        return {
+            include: config.get<string[]>('includeFolders') || ['**/*.html'],
+            exclude: config.get<string[]>('excludeFolders') || ['**/node_modules/**', '**/dist/**']
+        };
     };
 
-    // Core Search Logic
-    // mode: 0 = Single, 1 = Dual, 2 = Text
-    const runSearch = async (mode: 0 | 1 | 2) => {
+    const runSearch = async (selectors: string[], mode: 'single' | 'dual' | 'multi' | 'text', textToFind = "") => {
+        if (currentSearchToken) { currentSearchToken.cancel(); currentSearchToken.dispose(); }
+        currentSearchToken = new vscode.CancellationTokenSource();
+        const token = currentSearchToken.token;
+
         const { include, exclude } = getSearchConfiguration();
-
-        // Get 1st Selector
-        const sel1 = await vscode.window.showInputBox({ 
-            prompt: "1st Selector", 
-            value: getHistory('sel1')[0] || '' 
-        });
-        if (!sel1) return;
-        saveToHistory('sel1', sel1);
-
-        let sel2 = "";
-        let textToFind = "";
-
-        if (mode === 1) { // Dual Selector
-            sel2 = await vscode.window.showInputBox({ 
-                prompt: "2nd Selector", 
-                value: getHistory('sel2')[0] || '' 
-            }) || "";
-            if (sel2) saveToHistory('sel2', sel2);
-        } else if (mode === 2) { // Text Search
-            textToFind = await vscode.window.showInputBox({ 
-                prompt: "Text content to match" 
-            }) || "";
-            if (!textToFind) return;
-        }
-
         outputChannel.clear();
         outputChannel.show();
-        outputChannel.appendLine(`Searching: ${sel1} ${sel2 ? 'AND ' + sel2 : ''} ${textToFind ? 'with text: ' + textToFind : ''}`);
+        outputChannel.appendLine(`Searching for: ${selectors.join(' AND ')} ${textToFind ? 'with text: ' + textToFind : ''}`);
 
         let files: vscode.Uri[] = [];
         for (const pattern of include) {
             const found = await vscode.workspace.findFiles(pattern, exclude.join(','));
             files = [...files, ...found];
         }
-        
         const uniqueFiles = Array.from(new Set(files.map(f => f.fsPath))).map(path => vscode.Uri.file(path));
+        
         let foundCount = 0;
-
         for (const file of uniqueFiles) {
+            if (token.isCancellationRequested) return;
             const document = await vscode.workspace.openTextDocument(file);
             const content = document.getText();
             const $ = cheerio.load(content);
 
-            const m1 = $(sel1);
-            
-            if (mode === 1 && sel2) { // Dual Mode
-                if (m1.length > 0 && $(sel2).length > 0) {
+            if (selectors.every(s => $(s).length > 0)) {
+                if (mode === 'text') {
+                    $(selectors[0]).each((idx, el) => {
+                        const elementText = $(el).text().replace(/\s+/g, ' ').trim();
+                        if (elementText.toLowerCase().includes(textToFind.toLowerCase())) {
+                            const line = getLineNumber(content, (el as any).tagName || 'element', idx);
+                            outputChannel.appendLine(`${file.fsPath}:${line}:0 - Found with text: "${textToFind}"`);
+                            foundCount++;
+                        }
+                    });
+                } else {
                     outputChannel.appendLine(`MATCH: ${file.fsPath}`);
                     foundCount++;
                 }
-            } else if (mode === 2) { // Text Mode
-                m1.each((idx, el) => {
-                    const elementText = $(el).text().replace(/\s+/g, ' ').trim();
-                    if (elementText.toLowerCase().includes(textToFind.toLowerCase())) {
-                        const tagName = (el as any).tagName || 'element';
-                        const line = getLineNumber(content, tagName, idx);
-                        outputChannel.appendLine(`${file.fsPath}:${line}:0 - Found <${tagName}> containing: "${textToFind}"`);
-                        foundCount++;
-                    }
-                });
-            } else { // Single Mode
-                m1.each((idx, el) => {
-                    const tagName = (el as any).tagName || 'element';
-                    const line = getLineNumber(content, tagName, idx);
-                    outputChannel.appendLine(`${file.fsPath}:${line}:0 - Found <${tagName}>`);
-                    foundCount++;
-                });
             }
         }
         outputChannel.appendLine(`--- Search complete. Found in ${foundCount} items. ---`);
     };
 
-    // Register 3 commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('dom-hunt.searchSingle', () => runSearch(0)),
-        vscode.commands.registerCommand('dom-hunt.searchDual', () => runSearch(1)),
-        vscode.commands.registerCommand('dom-hunt.searchWithText', () => runSearch(2))
-    );
+    // 1. Single
+    context.subscriptions.push(vscode.commands.registerCommand('dom-hunt.searchSingle', async () => {
+        const sel = await vscode.window.showInputBox({ prompt: "Selector" });
+        if (sel) runSearch([sel], 'single');
+    }));
+
+    // 2. Dual
+    context.subscriptions.push(vscode.commands.registerCommand('dom-hunt.searchDual', async () => {
+        const s1 = await vscode.window.showInputBox({ prompt: "1st Selector" });
+        const s2 = await vscode.window.showInputBox({ prompt: "2nd Selector" });
+        if (s1 && s2) runSearch([s1, s2], 'dual');
+    }));
+
+    // 3. Multi (N)
+    context.subscriptions.push(vscode.commands.registerCommand('dom-hunt.searchMulti', async () => {
+        const countStr = await vscode.window.showInputBox({ prompt: "How many selectors?" });
+        const count = parseInt(countStr || "0");
+        if (isNaN(count) || count < 1) return;
+        const selectors: string[] = [];
+        for (let i = 0; i < count; i++) {
+            const s = await vscode.window.showInputBox({ prompt: `Enter Selector #${i + 1}` });
+            if (s) selectors.push(s);
+        }
+        if (selectors.length === count) runSearch(selectors, 'multi');
+    }));
+
+    // 4. Text
+    context.subscriptions.push(vscode.commands.registerCommand('dom-hunt.searchWithText', async () => {
+        const sel = await vscode.window.showInputBox({ prompt: "Selector" });
+        const text = await vscode.window.showInputBox({ prompt: "Text to match" });
+        if (sel && text) runSearch([sel], 'text', text);
+    }));
 }
 
 function getLineNumber(content: string, tagName: string, index: number): number {

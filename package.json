@@ -3,54 +3,49 @@
     "displayName": "DOM Hunt",
     "description": "Fast CSS-selector based DOM searching across workspace files.",
     "publisher": "umerata",
-    "version": "0.0.1",
+    "version": "0.2.0",
     "icon": "images/logo.png",
     "repository": {
         "type": "git",
         "url": "git://github.com/umerata/DomHunt.git"
     },
-    "keywords": ["html", "dom", "search", "css-selector"],
+    "keywords": [
+        "html",
+        "dom",
+        "search",
+        "css-selector"
+    ],
     "engines": {
         "vscode": "^1.74.0"
     },
     "activationEvents": [
-        "onCommand:dom-hunt.search"
+        "onCommand:dom-hunt.searchSingle",
+        "onCommand:dom-hunt.searchDual",
+        "onCommand:dom-hunt.searchMulti",
+        "onCommand:dom-hunt.searchWithText"
     ],
     "contributes": {
+        "commands": [
+            { "command": "dom-hunt.searchSingle", "title": "DOM Hunt: Single Selector" },
+            { "command": "dom-hunt.searchDual", "title": "DOM Hunt: Dual Selector (AND)" },
+            { "command": "dom-hunt.searchMulti", "title": "DOM Hunt: Multi-Selector (N-Count)" },
+            { "command": "dom-hunt.searchWithText", "title": "DOM Hunt: Selector with Text" }
+        ],
         "configuration": {
             "title": "DOM Hunt",
             "properties": {
-                "domSearcher.includeFolders": {
+                "domHunt.includeFolders": {
                     "type": "array",
-                    "default": [
-                        "**/*.html"
-                    ],
-                    "description": "Glob patterns of files/folders to include in the search."
+                    "default": ["**/*.html"],
+                    "description": "Glob patterns of files/folders to include."
                 },
-                "domSearcher.excludeFolders": {
+                "domHunt.excludeFolders": {
                     "type": "array",
-                    "default": [
-                        "**/node_modules/**",
-                        "**/dist/**"
-                    ],
+                    "default": ["**/node_modules/**", "**/dist/**"],
                     "description": "Glob patterns of folders to ignore."
                 }
             }
-        },
-        "commands": [
-            {
-                "command": "dom-hunt.searchSingle",
-                "title": "DOM Hunt: Single Selector"
-            },
-            {
-                "command": "dom-hunt.searchDual",
-                "title": "DOM Hunt: Dual Selector (AND)"
-            },
-            {
-                "command": "dom-hunt.searchWithText",
-                "title": "DOM Hunt: Selector with Text"
-            }
-        ]
+        }
     },
     "main": "./out/extension.js",
     "scripts": {
@@ -61,10 +56,9 @@
         "cheerio": "^1.0.0"
     },
     "devDependencies": {
-        "vscode": "^1.1.37",
-        "typescript": "^5.0.0",
-        "@vscode/vsce": "^3.0.0",
-        "@types/cheerio": "^0.22.30",
-        "@types/node": "^18.0.0"
+        "@types/cheerio": "^0.22.35",
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.74.0",
+        "typescript": "^5.0.0"
     }
 }

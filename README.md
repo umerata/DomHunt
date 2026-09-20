@@ -21,6 +21,17 @@ You can access these commands via the **Command Palette** (`Ctrl+Shift+P` or `Cm
     *   Find all occurrences of a specific element or structure. Results provide the file path and line number for every match.
 2.  **`DOM Hunt: Dual Selector (AND)`**
     *   Find all files that contain *both* Selector A and Selector B. Great for auditing files that contain specific component combinations.
+3.  **`DOM Hunt: Multi-Selector (N-Count)`**
+    *   Find files that contain a specific number of different elements or structures (AND logic). 
+    *   *Example:* Search for 3 selectors to find files that contain a `<header>`, a `<nav>`, AND a `<footer-link>` all at the same time.
+4.  **`DOM Hunt: Selector with Text`**
+    *   Find elements that match a specific CSS selector and contain specific text. It automatically normalizes whitespace and ignores line breaks, making it perfect for finding labels or content inside complex nested structures.
+
+
+
+
+
+
 
 ## Configuration
 
