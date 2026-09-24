@@ -3,7 +3,7 @@
     "displayName": "DOM Hunt",
     "description": "Fast CSS-selector based DOM searching across workspace files.",
     "publisher": "umerata",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "icon": "images/logo.png",
     "repository": {
         "type": "git",
